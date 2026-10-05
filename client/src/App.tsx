@@ -26,8 +26,8 @@ interface Task {
   priority: string;
   dueDate: string | null;
   projectId: number;
+  createdAt: string;
 }
-
 function App() {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState(
@@ -66,6 +66,7 @@ function App() {
   const [taskSearch, setTaskSearch] = useState("");
   const [taskStatusFilter, setTaskStatusFilter] = useState("all");
   const [taskPriorityFilter, setTaskPriorityFilter] = useState("all");
+  const [taskSort, setTaskSort] = useState("newest");
 
   const [taskMessage, setTaskMessage] = useState("");
   const [tasksLoading, setTasksLoading] = useState(false);
@@ -409,7 +410,8 @@ function App() {
   }, [token, selectedProjectId]);
 
   // Filter tasks by search, status and priority
-  const filteredTasks = tasks.filter((task) => {
+  const filteredTasks = [...tasks]
+  .filter((task) => {
     const matchesSearch = task.title
       .toLowerCase()
       .includes(taskSearch.toLowerCase());
@@ -423,8 +425,39 @@ function App() {
       task.priority === taskPriorityFilter;
 
     return matchesSearch && matchesStatus && matchesPriority;
-  });
+  })
+  .sort((a, b) => {
+    if (taskSort === "oldest") {
+      return (
+        new Date(a.createdAt).getTime() -
+        new Date(b.createdAt).getTime()
+      );
+    }
 
+    if (taskSort === "priority") {
+      const priorityOrder = { high: 3, medium: 2, low: 1 };
+
+      return (
+        priorityOrder[b.priority as keyof typeof priorityOrder] -
+        priorityOrder[a.priority as keyof typeof priorityOrder]
+      );
+    }
+
+    if (taskSort === "due-date") {
+      if (!a.dueDate) return 1;
+      if (!b.dueDate) return -1;
+
+      return (
+        new Date(a.dueDate).getTime() -
+        new Date(b.dueDate).getTime()
+      );
+    }
+
+    return (
+      new Date(b.createdAt).getTime() -
+      new Date(a.createdAt).getTime()
+    );
+  });
   function resetTaskForm() {
     setEditingTaskId(null);
     setTaskTitle("");
@@ -934,6 +967,7 @@ function App() {
                     setTaskSearch("");
                     setTaskStatusFilter("all");
                     setTaskPriorityFilter("all");
+		    setTaskSort("newest");
                   }}
                 >
                   {projects.map((project) => (
