@@ -5,8 +5,11 @@ import {
   editProject,
   removeProject,
 } from "../controllers/project.controller";
+import { authenticateToken } from "../middleware/auth.middleware";
 
 const router = Router();
+
+router.use(authenticateToken);
 
 router.get("/", getProjects);
 router.post("/", addProject);

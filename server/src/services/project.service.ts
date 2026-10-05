@@ -1,13 +1,14 @@
-
 import { prisma } from "../config/prisma";
 
-export const getAllProjects = async () => {
+export const getAllProjects = async (userId: number) => {
   return prisma.project.findMany({
+    where: { ownerId: userId },
     orderBy: { id: "asc" },
   });
 };
 
 export const createProject = async (
+  userId: number,
   name: string,
   description: string,
   status: string
@@ -17,23 +18,23 @@ export const createProject = async (
       name,
       description: description || null,
       status: status || "active",
+      ownerId: userId,
     },
   });
 };
 
 export const updateProject = async (
+  userId: number,
   id: number,
   name: string,
   description: string,
   status: string
 ) => {
-  const existing = await prisma.project.findUnique({
-    where: { id },
+  const existing = await prisma.project.findFirst({
+    where: { id, ownerId: userId },
   });
 
-  if (!existing) {
-    return null;
-  }
+  if (!existing) return null;
 
   return prisma.project.update({
     where: { id },
@@ -45,14 +46,12 @@ export const updateProject = async (
   });
 };
 
-export const deleteProject = async (id: number) => {
-  const existing = await prisma.project.findUnique({
-    where: { id },
+export const deleteProject = async (userId: number, id: number) => {
+  const existing = await prisma.project.findFirst({
+    where: { id, ownerId: userId },
   });
 
-  if (!existing) {
-    return null;
-  }
+  if (!existing) return null;
 
   return prisma.project.delete({
     where: { id },

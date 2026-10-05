@@ -1,12 +1,29 @@
-function Navbar() {
+
+interface NavbarProps {
+  userName?: string;
+  onLogout?: () => void;
+}
+
+function Navbar({ userName, onLogout }: NavbarProps) {
   return (
     <header className="header">
       <h1>DevFlow</h1>
 
       <nav>
-        <a href="#">Projects</a>
-        <a href="#">Tasks</a>
-        <a href="#">Team</a>
+        {userName ? (
+          <>
+            <span className="nav-user">Hi, {userName}</span>
+            <button
+              className="logout-button"
+              type="button"
+              onClick={onLogout}
+            >
+              Log out
+            </button>
+          </>
+        ) : (
+          <span className="nav-tagline">Project workspace</span>
+        )}
       </nav>
     </header>
   );

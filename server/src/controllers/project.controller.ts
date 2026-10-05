@@ -1,5 +1,4 @@
-
-import { Request, Response } from "express";
+import type { Request, Response } from "express";
 import {
   getAllProjects,
   createProject,
@@ -7,13 +6,13 @@ import {
   deleteProject,
 } from "../services/project.service";
 
-export const getProjects = async (_req: Request, res: Response) => {
+export const getProjects = async (req: Request, res: Response) => {
   try {
-    const projects = await getAllProjects();
+    const projects = await getAllProjects(req.user!.userId);
 
     res.json({
       success: true,
-      message: "Projects API",
+      message: "Projects fetched successfully",
       projects,
     });
   } catch (error) {
@@ -38,6 +37,7 @@ export const addProject = async (req: Request, res: Response) => {
     }
 
     const project = await createProject(
+      req.user!.userId,
       name.trim(),
       typeof description === "string" ? description : "",
       typeof status === "string" && status ? status : "active"
@@ -79,6 +79,7 @@ export const editProject = async (req: Request, res: Response) => {
     }
 
     const project = await updateProject(
+      req.user!.userId,
       id,
       name.trim(),
       typeof description === "string" ? description : "",
@@ -119,7 +120,7 @@ export const removeProject = async (req: Request, res: Response) => {
       return;
     }
 
-    const project = await deleteProject(id);
+    const project = await deleteProject(req.user!.userId, id);
 
     if (!project) {
       res.status(404).json({
