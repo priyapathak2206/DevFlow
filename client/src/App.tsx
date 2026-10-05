@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import Navbar from "./components/Navbar";
@@ -35,17 +34,11 @@ function App() {
     () => localStorage.getItem("devflow_token") || ""
   );
 
-  const [authMode, setAuthMode] = useState<"login" | "register" | "forgot-password" | "reset-password">("login");
-  const [resetToken, setResetToken] = useState("");
+  const [authMode, setAuthMode] = useState<
+    "login" | "register" | "forgot-password" | "reset-password"
+  >("login");
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const token = params.get("token");
-    if (token) {
-      setResetToken(token);
-      setAuthMode("reset-password");
-    }
-  }, []);
+  const [resetToken, setResetToken] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -68,9 +61,25 @@ function App() {
   const [taskDueDate, setTaskDueDate] = useState("");
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   const [taskStatus, setTaskStatus] = useState("todo");
+
+  // Task filters
+  const [taskSearch, setTaskSearch] = useState("");
+  const [taskStatusFilter, setTaskStatusFilter] = useState("all");
+  const [taskPriorityFilter, setTaskPriorityFilter] = useState("all");
+
   const [taskMessage, setTaskMessage] = useState("");
   const [tasksLoading, setTasksLoading] = useState(false);
   const [taskSaving, setTaskSaving] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tokenFromUrl = params.get("token");
+
+    if (tokenFromUrl) {
+      setResetToken(tokenFromUrl);
+      setAuthMode("reset-password");
+    }
+  }, []);
 
   function logout() {
     localStorage.removeItem("devflow_token");
@@ -92,9 +101,7 @@ function App() {
     const response = await fetch(`${API_URL}${path}`, {
       ...options,
       headers: {
-        ...(options.body
-          ? { "Content-Type": "application/json" }
-          : {}),
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
@@ -122,24 +129,39 @@ function App() {
 
     let endpoint = "";
     let body: any = {};
+
     if (authMode === "register") {
       endpoint = "/auth/register";
-      body = { name: name.trim(), email: email.trim(), password };
+      body = {
+        name: name.trim(),
+        email: email.trim(),
+        password,
+      };
     } else if (authMode === "login") {
       endpoint = "/auth/login";
-      body = { email: email.trim(), password };
+      body = {
+        email: email.trim(),
+        password,
+      };
     } else if (authMode === "forgot-password") {
       endpoint = "/auth/forgot-password";
-      body = { email: email.trim() };
+      body = {
+        email: email.trim(),
+      };
     } else if (authMode === "reset-password") {
       endpoint = "/auth/reset-password";
-      body = { token: resetToken, password };
+      body = {
+        token: resetToken,
+        password,
+      };
     }
 
     try {
       const response = await fetch(`${API_URL}${endpoint}`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify(body),
       });
 
@@ -150,16 +172,24 @@ function App() {
       }
 
       if (authMode === "register") {
-        setAuthMessage(data.message || "Registration successful. Please log in.");
+        setAuthMessage(
+          data.message || "Registration successful. Please log in."
+        );
         setAuthMode("login");
         setPassword("");
       } else if (authMode === "forgot-password") {
         setAuthMessage(data.message || "Password reset link sent.");
       } else if (authMode === "reset-password") {
-        setAuthMessage(data.message || "Password reset successful. Please log in.");
+        setAuthMessage(
+          data.message || "Password reset successful. Please log in."
+        );
         setAuthMode("login");
         setPassword("");
-        window.history.replaceState({}, document.title, window.location.pathname);
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname
+        );
       } else {
         if (!data.token || !data.user) {
           throw new Error("The server did not return a user and token.");
@@ -190,6 +220,7 @@ function App() {
 
     try {
       const data = await apiRequest("/projects");
+
       const list = Array.isArray(data.projects)
         ? data.projects
         : Array.isArray(data)
@@ -203,14 +234,22 @@ function App() {
       }
 
       setProjects(list);
+
       setSelectedProjectId((current) => {
-        if (current && list.some((p: Project) => String(p.id) === current)) {
+        if (
+          current &&
+          list.some((p: Project) => String(p.id) === current)
+        ) {
           return current;
         }
+
         return list.length ? String(list[0].id) : "";
       });
     } catch (error) {
-      if (error instanceof Error && !error.message.startsWith("Session expired")) {
+      if (
+        error instanceof Error &&
+        !error.message.startsWith("Session expired")
+      ) {
         setProjectMessage(error.message);
       }
     } finally {
@@ -219,11 +258,14 @@ function App() {
   }
 
   useEffect(() => {
-    if (token) void loadProjects();
+    if (token) {
+      void loadProjects();
+    }
   }, [token]);
 
   async function handleProjectSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (!token) return;
 
     setProjectMessage("");
@@ -254,6 +296,7 @@ function App() {
       setDescription("");
       setProjectStatus("active");
       setEditingProjectId(null);
+
       setProjectMessage(
         editingProjectId !== null
           ? "Project updated successfully."
@@ -263,7 +306,9 @@ function App() {
       await loadProjects();
     } catch (error) {
       setProjectMessage(
-        error instanceof Error ? error.message : "Could not save the project."
+        error instanceof Error
+          ? error.message
+          : "Could not save the project."
       );
     }
   }
@@ -274,7 +319,11 @@ function App() {
     setDescription(project.description || "");
     setProjectStatus(project.status || "active");
     setProjectMessage("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   }
 
   function cancelProjectEditing() {
@@ -286,20 +335,32 @@ function App() {
   }
 
   async function deleteProject(id: number) {
-    if (!window.confirm("Are you sure you want to delete this project and its tasks?")) {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this project and its tasks?"
+      )
+    ) {
       return;
     }
 
     setProjectMessage("");
 
     try {
-      await apiRequest(`/projects/${id}`, { method: "DELETE" });
-      if (editingProjectId === id) cancelProjectEditing();
+      await apiRequest(`/projects/${id}`, {
+        method: "DELETE",
+      });
+
+      if (editingProjectId === id) {
+        cancelProjectEditing();
+      }
+
       setProjectMessage("Project deleted successfully.");
       await loadProjects();
     } catch (error) {
       setProjectMessage(
-        error instanceof Error ? error.message : "Could not delete the project."
+        error instanceof Error
+          ? error.message
+          : "Could not delete the project."
       );
     }
   }
@@ -317,6 +378,7 @@ function App() {
       const data = await apiRequest(
         `/tasks?projectId=${encodeURIComponent(projectId)}`
       );
+
       const list = Array.isArray(data.tasks)
         ? data.tasks
         : Array.isArray(data.data)
@@ -326,7 +388,11 @@ function App() {
       setTasks(list);
     } catch (error) {
       setTasks([]);
-      if (error instanceof Error && !error.message.startsWith("Session expired")) {
+
+      if (
+        error instanceof Error &&
+        !error.message.startsWith("Session expired")
+      ) {
         setTaskMessage(error.message);
       }
     } finally {
@@ -341,6 +407,23 @@ function App() {
       setTasks([]);
     }
   }, [token, selectedProjectId]);
+
+  // Filter tasks by search, status and priority
+  const filteredTasks = tasks.filter((task) => {
+    const matchesSearch = task.title
+      .toLowerCase()
+      .includes(taskSearch.toLowerCase());
+
+    const matchesStatus =
+      taskStatusFilter === "all" ||
+      task.status === taskStatusFilter;
+
+    const matchesPriority =
+      taskPriorityFilter === "all" ||
+      task.priority === taskPriorityFilter;
+
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
 
   function resetTaskForm() {
     setEditingTaskId(null);
@@ -357,8 +440,11 @@ function App() {
     setTaskDescription(task.description || "");
     setTaskPriority(task.priority || "medium");
     setTaskStatus(task.status || "todo");
-    setTaskDueDate(task.dueDate ? task.dueDate.slice(0, 10) : "");
+    setTaskDueDate(
+      task.dueDate ? task.dueDate.slice(0, 10) : ""
+    );
     setTaskMessage("");
+
     document.getElementById("task-form")?.scrollIntoView({
       behavior: "smooth",
       block: "start",
@@ -395,6 +481,7 @@ function App() {
           method: "PUT",
           body: JSON.stringify(task),
         });
+
         setTaskMessage("Task updated successfully.");
       } else {
         await apiRequest("/tasks", {
@@ -404,6 +491,7 @@ function App() {
             projectId: Number(selectedProjectId),
           }),
         });
+
         setTaskMessage("Task created successfully.");
       }
 
@@ -411,14 +499,19 @@ function App() {
       await loadTasks(selectedProjectId);
     } catch (error) {
       setTaskMessage(
-        error instanceof Error ? error.message : "Could not save the task."
+        error instanceof Error
+          ? error.message
+          : "Could not save the task."
       );
     } finally {
       setTaskSaving(false);
     }
   }
 
-  async function changeTaskStatus(task: Task, newStatus: string) {
+  async function changeTaskStatus(
+    task: Task,
+    newStatus: string
+  ) {
     try {
       await apiRequest(`/tasks/${task.id}`, {
         method: "PUT",
@@ -437,22 +530,34 @@ function App() {
       setTaskMessage("Task status updated.");
     } catch (error) {
       setTaskMessage(
-        error instanceof Error ? error.message : "Could not update task status."
+        error instanceof Error
+          ? error.message
+          : "Could not update task status."
       );
     }
   }
 
   async function deleteTask(id: number) {
-    if (!window.confirm("Are you sure you want to delete this task?")) return;
+    if (!window.confirm("Are you sure you want to delete this task?")) {
+      return;
+    }
 
     try {
-      await apiRequest(`/tasks/${id}`, { method: "DELETE" });
-      if (editingTaskId === id) resetTaskForm();
+      await apiRequest(`/tasks/${id}`, {
+        method: "DELETE",
+      });
+
+      if (editingTaskId === id) {
+        resetTaskForm();
+      }
+
       setTaskMessage("Task deleted successfully.");
       await loadTasks(selectedProjectId);
     } catch (error) {
       setTaskMessage(
-        error instanceof Error ? error.message : "Could not delete the task."
+        error instanceof Error
+          ? error.message
+          : "Could not delete the task."
       );
     }
   }
@@ -461,19 +566,27 @@ function App() {
     return (
       <div className="app">
         <Navbar />
+
         <main className="auth-main">
           <section className="auth-card">
             <h2>
-              {authMode === "login" ? "Welcome back" :
-               authMode === "register" ? "Create your account" :
-               authMode === "forgot-password" ? "Reset your password" :
-               "Choose a new password"}
+              {authMode === "login"
+                ? "Welcome back"
+                : authMode === "register"
+                  ? "Create your account"
+                  : authMode === "forgot-password"
+                    ? "Reset your password"
+                    : "Choose a new password"}
             </h2>
+
             <p>
-              {authMode === "login" ? "Log in to manage your projects and tasks." :
-               authMode === "register" ? "Register to get started with DevFlow." :
-               authMode === "forgot-password" ? "Enter your email and we'll send you a reset link." :
-               "Enter your new password below."}
+              {authMode === "login"
+                ? "Log in to manage your projects and tasks."
+                : authMode === "register"
+                  ? "Register to get started with DevFlow."
+                  : authMode === "forgot-password"
+                    ? "Enter your email and we'll send you a reset link."
+                    : "Enter your new password below."}
             </p>
 
             <form className="auth-form" onSubmit={handleAuth}>
@@ -483,7 +596,9 @@ function App() {
                   <input
                     type="text"
                     value={name}
-                    onChange={(event) => setName(event.target.value)}
+                    onChange={(event) =>
+                      setName(event.target.value)
+                    }
                     required
                     autoComplete="name"
                   />
@@ -496,7 +611,9 @@ function App() {
                   <input
                     type="email"
                     value={email}
-                    onChange={(event) => setEmail(event.target.value)}
+                    onChange={(event) =>
+                      setEmail(event.target.value)
+                    }
                     required
                     autoComplete="email"
                   />
@@ -505,23 +622,38 @@ function App() {
 
               {authMode !== "forgot-password" && (
                 <label>
-                  {authMode === "reset-password" ? "New Password" : "Password"}
+                  {authMode === "reset-password"
+                    ? "New Password"
+                    : "Password"}
+
                   <input
                     type="password"
                     value={password}
-                    onChange={(event) => setPassword(event.target.value)}
+                    onChange={(event) =>
+                      setPassword(event.target.value)
+                    }
                     required
                     minLength={8}
                     autoComplete={
-                      authMode === "login" ? "current-password" : "new-password"
+                      authMode === "login"
+                        ? "current-password"
+                        : "new-password"
                     }
                   />
                 </label>
               )}
 
-              {authMessage && <p className="form-message">{authMessage}</p>}
+              {authMessage && (
+                <p className="form-message">
+                  {authMessage}
+                </p>
+              )}
 
-              <button className="auth-submit" type="submit" disabled={loading}>
+              <button
+                className="auth-submit"
+                type="submit"
+                disabled={loading}
+              >
                 {loading
                   ? "Please wait..."
                   : authMode === "login"
@@ -548,23 +680,32 @@ function App() {
                   </button>
                 </div>
               )}
-              
+
               <span>
-                {authMode === "login" ? "Don't have an account? " :
-                 authMode === "register" ? "Already have an account? " : ""}
+                {authMode === "login"
+                  ? "Don't have an account? "
+                  : authMode === "register"
+                    ? "Already have an account? "
+                    : ""}
               </span>
 
               {authMode !== "reset-password" && (
                 <button
                   type="button"
                   onClick={() => {
-                    setAuthMode(authMode === "login" ? "register" : "login");
+                    setAuthMode(
+                      authMode === "login"
+                        ? "register"
+                        : "login"
+                    );
                     setAuthMessage("");
                   }}
                 >
-                  {authMode === "login" ? "Register" :
-                   authMode === "register" ? "Log in" :
-                   "Back to login"}
+                  {authMode === "login"
+                    ? "Register"
+                    : authMode === "register"
+                      ? "Log in"
+                      : "Back to login"}
                 </button>
               )}
             </div>
@@ -582,24 +723,35 @@ function App() {
         <div className="page-header">
           <div>
             <h2>Your workspace</h2>
-            <p>Welcome, {user.name}. Manage your projects and tasks.</p>
+            <p>
+              Welcome, {user.name}. Manage your projects and tasks.
+            </p>
           </div>
+
           <span className="project-count">
-            {projects.length} {projects.length === 1 ? "project" : "projects"}
+            {projects.length}{" "}
+            {projects.length === 1 ? "project" : "projects"}
           </span>
         </div>
 
         <section className="create-section">
           <h3>
-            {editingProjectId !== null ? "Edit project" : "Create a project"}
+            {editingProjectId !== null
+              ? "Edit project"
+              : "Create a project"}
           </h3>
 
-          <form className="project-form" onSubmit={handleProjectSubmit}>
+          <form
+            className="project-form"
+            onSubmit={handleProjectSubmit}
+          >
             <input
               type="text"
               placeholder="Project name"
               value={projectName}
-              onChange={(event) => setProjectName(event.target.value)}
+              onChange={(event) =>
+                setProjectName(event.target.value)
+              }
               required
             />
 
@@ -607,12 +759,16 @@ function App() {
               type="text"
               placeholder="Description"
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(event) =>
+                setDescription(event.target.value)
+              }
             />
 
             <select
               value={projectStatus}
-              onChange={(event) => setProjectStatus(event.target.value)}
+              onChange={(event) =>
+                setProjectStatus(event.target.value)
+              }
             >
               <option value="active">Active</option>
               <option value="planning">Planning</option>
@@ -621,8 +777,11 @@ function App() {
 
             <div className="form-buttons">
               <button type="submit">
-                {editingProjectId !== null ? "Update" : "Create"}
+                {editingProjectId !== null
+                  ? "Update"
+                  : "Create"}
               </button>
+
               {editingProjectId !== null && (
                 <button
                   type="button"
@@ -635,7 +794,11 @@ function App() {
             </div>
           </form>
 
-          {projectMessage && <p className="form-message">{projectMessage}</p>}
+          {projectMessage && (
+            <p className="form-message">
+              {projectMessage}
+            </p>
+          )}
         </section>
 
         <section className="projects-section">
@@ -644,7 +807,9 @@ function App() {
           </div>
 
           {projectsLoading ? (
-            <p className="empty-message">Loading projects...</p>
+            <p className="empty-message">
+              Loading projects...
+            </p>
           ) : projects.length === 0 ? (
             <p className="empty-message">
               No projects yet. Create your first project above.
@@ -652,28 +817,42 @@ function App() {
           ) : (
             <div className="project-grid">
               {projects.map((project) => (
-                <article className="project-card" key={project.id}>
+                <article
+                  className="project-card"
+                  key={project.id}
+                >
                   <div className="project-card-header">
                     <h3>{project.name}</h3>
-                    <span className={`status ${project.status}`}>
+
+                    <span
+                      className={`status ${project.status}`}
+                    >
                       {project.status}
                     </span>
                   </div>
 
-                  <p>{project.description || "No description provided."}</p>
+                  <p>
+                    {project.description ||
+                      "No description provided."}
+                  </p>
 
                   <div className="project-card-actions">
                     <button
                       className="edit-button"
                       type="button"
-                      onClick={() => startEditingProject(project)}
+                      onClick={() =>
+                        startEditingProject(project)
+                      }
                     >
                       Edit
                     </button>
+
                     <button
                       className="delete-button"
                       type="button"
-                      onClick={() => void deleteProject(project.id)}
+                      onClick={() =>
+                        void deleteProject(project.id)
+                      }
                     >
                       Delete
                     </button>
@@ -685,13 +864,51 @@ function App() {
         </section>
 
         <section className="tasks-section">
+	<div className="task-stats">
+  <div className="task-stat">
+    <span>Total</span>
+    <strong>{tasks.length}</strong>
+  </div>
+
+  <div className="task-stat">
+    <span>To Do</span>
+    <strong>
+      {tasks.filter((task) => task.status === "todo").length}
+    </strong>
+  </div>
+
+  <div className="task-stat">
+    <span>In Progress</span>
+    <strong>
+      {tasks.filter((task) => task.status === "in-progress").length}
+    </strong>
+  </div>
+
+  <div className="task-stat">
+    <span>Completed</span>
+    <strong>
+      {tasks.filter((task) => task.status === "completed").length}
+    </strong>
+  </div>
+
+  <div className="task-stat">
+    <span>High Priority</span>
+    <strong>
+      {tasks.filter((task) => task.priority === "high").length}
+    </strong>
+  </div>
+</div>
           <div className="section-header">
             <div>
               <h3>Task management</h3>
-              <p>Create tasks and track their progress by project.</p>
+              <p>
+                Create tasks and track their progress by project.
+              </p>
             </div>
+
             <span className="project-count">
-              {tasks.length} {tasks.length === 1 ? "task" : "tasks"}
+              {tasks.length}{" "}
+              {tasks.length === 1 ? "task" : "tasks"}
             </span>
           </div>
 
@@ -703,46 +920,73 @@ function App() {
             <>
               <label className="task-project-select">
                 Select project
+
                 <select
                   value={selectedProjectId}
                   onChange={(event) => {
-                    setSelectedProjectId(event.target.value);
+                    setSelectedProjectId(
+                      event.target.value
+                    );
                     resetTaskForm();
                     setTaskMessage("");
+
+                    // Clear filters when changing project
+                    setTaskSearch("");
+                    setTaskStatusFilter("all");
+                    setTaskPriorityFilter("all");
                   }}
                 >
                   {projects.map((project) => (
-                    <option key={project.id} value={project.id}>
+                    <option
+                      key={project.id}
+                      value={project.id}
+                    >
                       {project.name}
                     </option>
                   ))}
                 </select>
               </label>
 
-              <div className="task-form-card" id="task-form">
+              <div
+                className="task-form-card"
+                id="task-form"
+              >
                 <h4>
-                  {editingTaskId !== null ? "Edit task" : "Create a task"}
+                  {editingTaskId !== null
+                    ? "Edit task"
+                    : "Create a task"}
                 </h4>
 
-                <form className="task-form" onSubmit={handleTaskSubmit}>
+                <form
+                  className="task-form"
+                  onSubmit={handleTaskSubmit}
+                >
                   <label>
                     Task title
+
                     <input
                       type="text"
                       placeholder="e.g. Design the dashboard"
                       value={taskTitle}
-                      onChange={(event) => setTaskTitle(event.target.value)}
+                      onChange={(event) =>
+                        setTaskTitle(
+                          event.target.value
+                        )
+                      }
                       required
                     />
                   </label>
 
                   <label>
                     Description
+
                     <textarea
                       placeholder="What needs to be done?"
                       value={taskDescription}
                       onChange={(event) =>
-                        setTaskDescription(event.target.value)
+                        setTaskDescription(
+                          event.target.value
+                        )
                       }
                       rows={3}
                     />
@@ -751,25 +995,37 @@ function App() {
                   <div className="task-form-row">
                     <label>
                       Priority
+
                       <select
                         value={taskPriority}
                         onChange={(event) =>
-                          setTaskPriority(event.target.value)
+                          setTaskPriority(
+                            event.target.value
+                          )
                         }
                       >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
+                        <option value="low">
+                          Low
+                        </option>
+                        <option value="medium">
+                          Medium
+                        </option>
+                        <option value="high">
+                          High
+                        </option>
                       </select>
                     </label>
 
                     <label>
                       Due date
+
                       <input
                         type="date"
                         value={taskDueDate}
                         onChange={(event) =>
-                          setTaskDueDate(event.target.value)
+                          setTaskDueDate(
+                            event.target.value
+                          )
                         }
                       />
                     </label>
@@ -777,22 +1033,34 @@ function App() {
                     {editingTaskId !== null && (
                       <label>
                         Status
+
                         <select
                           value={taskStatus}
                           onChange={(event) =>
-                            setTaskStatus(event.target.value)
+                            setTaskStatus(
+                              event.target.value
+                            )
                           }
                         >
-                          <option value="todo">To Do</option>
-                          <option value="in-progress">In Progress</option>
-                          <option value="completed">Completed</option>
+                          <option value="todo">
+                            To Do
+                          </option>
+                          <option value="in-progress">
+                            In Progress
+                          </option>
+                          <option value="completed">
+                            Completed
+                          </option>
                         </select>
                       </label>
                     )}
                   </div>
 
                   <div className="form-buttons">
-                    <button type="submit" disabled={taskSaving}>
+                    <button
+                      type="submit"
+                      disabled={taskSaving}
+                    >
                       {taskSaving
                         ? "Saving..."
                         : editingTaskId !== null
@@ -813,7 +1081,10 @@ function App() {
                 </form>
 
                 {taskMessage && (
-                  <p className="form-message" role="status">
+                  <p
+                    className="form-message"
+                    role="status"
+                  >
                     {taskMessage}
                   </p>
                 )}
@@ -822,23 +1093,93 @@ function App() {
               <div className="task-list">
                 <h4>Tasks for this project</h4>
 
+                {/* Task Search and Filters */}
+                <div className="task-filters">
+                  <input
+                    type="text"
+                    placeholder="Search tasks..."
+                    value={taskSearch}
+                    onChange={(event) =>
+                      setTaskSearch(
+                        event.target.value
+                      )
+                    }
+                  />
+
+                  <select
+                    value={taskStatusFilter}
+                    onChange={(event) =>
+                      setTaskStatusFilter(
+                        event.target.value
+                      )
+                    }
+                  >
+                    <option value="all">
+                      All Statuses
+                    </option>
+                    <option value="todo">
+                      To Do
+                    </option>
+                    <option value="in-progress">
+                      In Progress
+                    </option>
+                    <option value="completed">
+                      Completed
+                    </option>
+                  </select>
+
+                  <select
+                    value={taskPriorityFilter}
+                    onChange={(event) =>
+                      setTaskPriorityFilter(
+                        event.target.value
+                      )
+                    }
+                  >
+                    <option value="all">
+                      All Priorities
+                    </option>
+                    <option value="low">
+                      Low
+                    </option>
+                    <option value="medium">
+                      Medium
+                    </option>
+                    <option value="high">
+                      High
+                    </option>
+                  </select>
+                </div>
+
                 {tasksLoading ? (
-                  <p className="empty-message">Loading tasks...</p>
-                ) : tasks.length === 0 ? (
                   <p className="empty-message">
-                    No tasks yet. Create your first task above.
+                    Loading tasks...
+                  </p>
+                ) : filteredTasks.length === 0 ? (
+                  <p className="empty-message">
+                    {tasks.length === 0
+                      ? "No tasks yet. Create your first task above."
+                      : "No tasks match your filters."}
                   </p>
                 ) : (
-                  tasks.map((task) => (
-                    <article className="task-card" key={task.id}>
+                  filteredTasks.map((task) => (
+                    <article
+                      className="task-card"
+                      key={task.id}
+                    >
                       <div className="task-card-top">
                         <div>
                           <h4>{task.title}</h4>
+
                           <p>
-                            {task.description || "No description provided."}
+                            {task.description ||
+                              "No description provided."}
                           </p>
                         </div>
-                        <span className={`priority-badge ${task.priority}`}>
+
+                        <span
+                          className={`priority-badge ${task.priority}`}
+                        >
                           {task.priority}
                         </span>
                       </div>
@@ -846,15 +1187,25 @@ function App() {
                       <div className="task-card-meta">
                         <label>
                           Status
+
                           <select
                             value={task.status}
                             onChange={(event) =>
-                              void changeTaskStatus(task, event.target.value)
+                              void changeTaskStatus(
+                                task,
+                                event.target.value
+                              )
                             }
                           >
-                            <option value="todo">To Do</option>
-                            <option value="in-progress">In Progress</option>
-                            <option value="completed">Completed</option>
+                            <option value="todo">
+                              To Do
+                            </option>
+                            <option value="in-progress">
+                              In Progress
+                            </option>
+                            <option value="completed">
+                              Completed
+                            </option>
                           </select>
                         </label>
 
@@ -870,14 +1221,19 @@ function App() {
                         <button
                           className="edit-button"
                           type="button"
-                          onClick={() => startEditingTask(task)}
+                          onClick={() =>
+                            startEditingTask(task)
+                          }
                         >
                           Edit task
                         </button>
+
                         <button
                           className="delete-button"
                           type="button"
-                          onClick={() => void deleteTask(task.id)}
+                          onClick={() =>
+                            void deleteTask(task.id)
+                          }
                         >
                           Delete task
                         </button>
